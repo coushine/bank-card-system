@@ -1,0 +1,18 @@
+bank-card-system/
+ ├─ src/
+ │   ├─ main/
+ │   │   ├─ java/
+ │   │   │   └─ com/
+ │   │   │       └─ bankcards/
+ │   │   │           └─ BankCardSystemApplication.java
+ │   │   └─ resources/
+ │   │       ├─ application.yml
+ │   │       └─ db/
+ │   │           └─ changelog/
+ │   │               └─ db.changelog-master.yaml
+ │   └─ test/
+ │       └─ java/
+ │           └─ com/
+ │               └─ bankcards/
+ │                   └─ BankCardSystemApplicationTests.java
+ └─ pom.xml
