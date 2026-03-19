@@ -1,13 +1,14 @@
 package com.bankcards.entity.enums;
 
-import org.springframework.security.core.GrantedAuthority;
+//import org.springframework.security.core.GrantedAuthority;
 
-public enum RoleUsers implements GrantedAuthority {
-    ROLE_USER,
-    ROLE_ADMIN;
+public enum RoleUsers {
+    USER,
+    ADMIN,
+    MODERATOR
 
-    @Override
-    public String getAuthority() {
-        return name();
-    }
+//    @Override
+//    public String getAuthority() {
+//        return name();
+//    }
 }

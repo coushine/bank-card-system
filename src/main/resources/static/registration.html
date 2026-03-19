@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+</head>
+<body>
+
+<h2>Регистрация пользователя</h2>
+
+<form id="regForm">
+    <label>Email:</label><br>
+    <input type="text" id="email" required><br><br>
+
+    <label>Полное имя:</label><br>
+    <input type="text" id="fullName" required><br><br>
+
+    <label>Пароль:</label><br>
+    <input type="password" id="password" required><br><br>
+
+    <label>Роль:</label><br>
+    <select id="role">
+        <option value="USER">user</option>
+        <option value="ADMIN">admin</option>
+    </select>
+    <br><br>
+
+    <button type="button" onclick="register()">Зарегистрироваться</button>
+</form>
+
+<script>
+    function register() { //Она будет вызвана, когда пользователь нажмёт кнопку "Зарегистрироваться".
+
+        //Создание JavaScript-объекта user из данных формы
+        const user = {
+            email: document.getElementById("email").value,
+            fullName: document.getElementById("fullName").value,
+            password: document.getElementById("password").value,
+            role: document.getElementById("role").value
+        };
+
+        //Отправка данных на backend через fetch()
+        fetch("/users/registration", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(user) //объект user преобразуется в JSON-строку.
+        })
+            //Получение ответа от сервера и преобразование в JSON
+            .then(r => r.json()) //r — ответ сервера (HTTP response)
+            .then(data => alert("Регистрация успешна! ID пользователя: " + data.id))
+            .catch(err => alert("Ошибка: " + err));
+    }
+</script>
+
+</body>
+</html>

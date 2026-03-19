@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations — Bank Cards</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: #f0f2f5; color: #1a1a2e; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+        .header .user-info { display: flex; align-items: center; gap: 1rem; }
+        .header .username { font-weight: 500; opacity: 0.95; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; text-decoration: none; display: inline-block; }
+        .btn-logout { background: rgba(255,255,255,0.15); color: #fff; }
+        .btn-logout:hover { background: rgba(255,255,255,0.25); }
+        nav { background: #fff; padding: 0.75rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        nav a { margin-right: 1.5rem; color: #1a1a2e; text-decoration: none; font-weight: 500; }
+        nav a:hover { text-decoration: underline; }
+        nav a.active { color: #0d6efd; text-decoration: underline; }
+        main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Bank Cards</h1>
+        <div class="user-info">
+            <span class="username" id="displayUsername">User</span>
+            <a href="/authorization.html" class="btn btn-logout">Log Out</a>
+        </div>
+    </header>
+    <nav>
+        <a href="/account.html">Account</a>
+        <a href="/cards.html">My cards</a>
+        <a href="/transactions.html" class="active">Operations</a>
+        <a href="/profile.html">Profile</a>
+    </nav>
+    <main>
+        <h2>Operations</h2>
+        <p>Transaction history will be displayed here.</p>
+    </main>
+    <script>
+        (function () {
+            try {
+                var u = JSON.parse(localStorage.getItem('bankUser') || '{}');
+                var el = document.getElementById('displayUsername');
+                if (el) el.textContent = u.fullName || u.email || 'User';
+            } catch (_) {}
+        })();
+    </script>
+</body>
+</html>

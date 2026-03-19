@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Авторизация</title>
+</head>
+<body>
+
+<h2>Авторизация пользователя</h2>
+
+<form id="loginForm">
+    <label>Email:</label><br>
+    <input type="text" id="email" required><br><br>
+
+    <label>Пароль:</label><br>
+    <input type="password" id="password" required><br><br>
+
+    <button type="button" onclick="enter()">Войти</button>
+
+    <!-- кнопка ведёт на страницу регистрации -->
+    <button type="button" onclick="goToRegistration()">Зарегистрироваться</button>
+</form>
+
+<script>
+    function enter() {
+        const user = {
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+        };
+
+        fetch("/users/authorization", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(user)
+        })
+            .then(function(response) { return response.ok ? response.json() : Promise.reject(); })
+            .then(function(data) {
+                try {
+                    var stored = { id: data.id, email: data.email, fullName: data.fullName };
+                    localStorage.setItem("bankUser", JSON.stringify(stored));
+                } catch (e) {}
+                alert("Авторизация прошла успешно");
+                window.location.href = "/account.html";
+            })
+            .catch(function() { alert("Ошибка авторизации"); });
+    }
+
+    function goToRegistration() {
+        window.location.href = "/registration.html";  // ← сюда подставь свой путь
+    }
+</script>
+
+</body>
+</html>

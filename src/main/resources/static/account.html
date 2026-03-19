@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account — Bank Cards</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .header .username {
+            font-weight: 500;
+            opacity: 0.95;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-logout {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        nav {
+            background: #fff;
+            padding: 0.75rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        nav a {
+            margin-right: 1.5rem;
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        nav a.active {
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+        main {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        .cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .card-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .card-box h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .card-box .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .card-box.balance .value { color: #0d6efd; }
+        .transactions-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .transactions-section h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+        }
+        .transactions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .transactions-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .transactions-list li:last-child { border-bottom: none; }
+        .tx-amount.income { color: #198754; }
+        .tx-amount.outcome { color: #dc3545; }
+        .tx-desc { color: #555; }
+        .empty-state { color: #888; font-style: italic; }
+        .actions-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .action-box { background: #fff; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex: 1; min-width: 260px; }
+        .action-box h3 { margin: 0 0 0.75rem 0; font-size: 1rem; }
+        .action-box label { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; }
+        .action-box input, .action-box select { padding: 0.5rem; width: 100%; margin-bottom: 0.75rem; border-radius: 6px; border: 1px solid #ccc; }
+        .action-box button { margin-top: 0.25rem; }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .lookup-result { font-size: 0.9rem; color: #666; margin-top: 0.25rem; }
+        .msg { padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .msg.err { background: #f8d7da; color: #721c24; }
+        .msg.ok { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Bank Cards</h1>
+        <div class="user-info">
+            <span class="username" id="displayUsername">User</span>
+            <button type="button" class="btn btn-logout" id="btnLogout">Выйти</button>
+        </div>
+    </header>
+
+    <nav>
+        <a href="/account.html" class="active">Счёт</a>
+        <a href="/cards.html">Мои карты</a>
+        <a href="/transactions.html">Операции</a>
+        <a href="/profile.html">Профиль</a>
+    </nav>
+
+    <main>
+        <div id="message"></div>
+        <section class="cards-row">
+            <div class="card-box balance">
+                <h3>Total balance</h3>
+                <div class="value" id="totalBalance">—</div>
+            </div>
+            <div class="card-box">
+                <h3>Number of cards</h3>
+                <div class="value" id="cardsCount">—</div>
+            </div>
+        </section>
+
+        <section class="actions-row">
+            <div class="action-box">
+                <h3>Пополнить карту</h3>
+                <label>Ваша карта</label>
+                <select id="topUpCardId"><option value="">— Выберите карту —</option></select>
+                <label>Сумма (₽)</label>
+                <input type="number" id="topUpAmount" min="0.01" step="0.01" placeholder="0.00">
+                <label>Карта, с которой списать (необязательно)</label>
+                <input type="text" id="topUpSourceCard" placeholder="Номер карты-источника">
+                <button type="button" class="btn btn-primary" id="btnTopUp">Пополнить</button>
+            </div>
+            <div class="action-box">
+                <h3>Перевод на другую карту</h3>
+                <label>С карты</label>
+                <select id="transferFromCardId"><option value="">— Выберите карту —</option></select>
+                <label>Номер карты получателя</label>
+                <input type="text" id="transferToCardNumber" placeholder="Введите номер карты в БД">
+                <div class="lookup-result" id="transferToLookup"></div>
+                <label>Сумма (₽)</label>
+                <input type="number" id="transferAmount" min="0.01" step="0.01" placeholder="0.00">
+                <button type="button" class="btn btn-primary" id="btnTransfer">Перевести</button>
+            </div>
+        </section>
+
+        <section class="transactions-section">
+            <h3>Recent transactions</h3>
+            <ul class="transactions-list" id="recentTransactions">
+                <li class="empty-state">Loading…</li>
+            </ul>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const STORAGE_USER = 'bankUser';
+
+            //Достает данные о пользователе из памяти браузера
+            function getStoredUser() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_USER);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (_) { return null; }
+            }
+
+            //Ищет элемент с id="displayUsername" и вписывает туда имя пользователя.
+            //Сначала она пытается показать полное имя (fullName), если его нет — почту (email), а если и того нет — просто пишет «User».
+            function renderUsername() {
+                const user = getStoredUser();
+                const el = document.getElementById('displayUsername');
+                if (el) el.textContent = user && user.fullName ? user.fullName : (user && user.email ? user.email : 'User');
+            }
+
+            //Удаляет ключ bankUser из памяти и перенаправляет браузер на страницу авторизации
+            function logout() {
+                localStorage.removeItem(STORAGE_USER);
+                window.location.href = '/authorization.html';
+            }
+
+            //Вывод денег
+            function formatMoney(amount) {
+                if (amount == null || amount === undefined) return '—';
+                const n = Number(amount);
+                return isNaN(n) ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+            }
+
+            function renderBalance(total) {
+                const el = document.getElementById('totalBalance');
+                if (el) el.textContent = formatMoney(total);
+            }
+
+            function renderCardsCount(count) {
+                const el = document.getElementById('cardsCount');
+                if (el) el.textContent = count != null && !isNaN(count) ? count : '—';
+            }
+
+            //Генерирует HTML-список последних операций.
+            function renderRecentTransactions(transactions) {
+                var list = document.getElementById('recentTransactions');
+                if (!list) return;
+                if (!transactions || transactions.length === 0) {
+                    list.innerHTML = '<li class="empty-state">Нет операций</li>';
+                    return;
+                }
+                list.innerHTML = transactions.map(function (tx) {
+                    var isOut = tx.amount < 0;
+                    var cls = isOut ? 'outcome' : 'income';
+                    var sign = isOut ? '−' : '+';
+                    var amount = Math.abs(tx.amount);
+                    var desc = tx.description || 'Операция';
+                    return '<li><span class="tx-desc">' + escapeHtml(desc) + '</span><span class="tx-amount ' + cls + '">' + sign + formatMoney(amount) + '</span></li>';
+                }).join('');
+            }
+
+            //Заменяет спецсимволы вроде < или > на их безопасные аналоги.
+            function escapeHtml(s) {
+                const div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
+            }
+
+            //Центральный мозг скрипта. Она координирует все действия:
+            function loadAccountData() {
+                var user = getStoredUser();
+                var userId = user && user.id;
+
+                //Узнаем свежие данные профиля.
+                if (userId) {
+                    fetch('/users/' + userId)
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (data) {
+                            if (data && data.fullName) {
+                                try {
+                                    var stored = getStoredUser() || {};
+                                    stored.fullName = data.fullName;
+                                    stored.email = data.email;
+                                    stored.id = data.id;
+                                    localStorage.setItem(STORAGE_USER, JSON.stringify(stored));
+                                } catch (_) {}
+                                renderUsername();
+                            }
+                        })
+                        .catch(function () {});
+                }
+
+                // получить баланс, список карт и последние операции
+                if (userId) {
+                    fetch('/users/' + userId + '/summary')
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (data) {
+                            if (data) {
+                                renderBalance(data.totalBalance);
+                                renderCardsCount(data.cardsCount);
+                                renderRecentTransactions(data.recentTransactions || []);
+                                fillCardSelects(data.cards || []);
+                            } else {
+                                usePlaceholderData();
+                            }
+                        })
+                        .catch(function () { usePlaceholderData(); });
+                } else {
+                    usePlaceholderData();
+                }
+            }
+
+            function fillCardSelects(cards) {
+                var opts = '<option value="">— Выберите карту —</option>' + (cards.map(function (c) { return '<option value="' + c.id + '">' + escapeHtml(c.maskedNumber) + '</option>'; }).join(''));
+                var s1 = document.getElementById('topUpCardId');
+                var s2 = document.getElementById('transferFromCardId');
+                if (s1) s1.innerHTML = opts;
+                if (s2) s2.innerHTML = opts;
+            }
+
+            //Аварийный режим. Если интернет пропал или сервер «лежит», эта функция ставит баланс в 0 и очищает список транзакций, чтобы пользователь не видел бесконечную надпись «Loading...».
+            function usePlaceholderData() {
+                renderBalance(0);
+                renderCardsCount(0);
+                renderRecentTransactions([]);
+                fillCardSelects([]);
+            }
+
+            function showMessage(text, isError) {
+                var el = document.getElementById('message');
+                el.className = 'msg ' + (isError ? 'err' : 'ok');
+                el.textContent = text;
+                el.style.display = 'block';
+                setTimeout(function () { el.style.display = 'none'; }, 4000);
+            }
+
+            var transferToCardId = null;
+            document.getElementById('transferToCardNumber').addEventListener('input', function () {
+                // 1. Как только вы начали печатать, ID сбрасывается в null
+                transferToCardId = null;
+
+                // 2. Если введено меньше 4 символов — ничего не делаем
+                var el = document.getElementById('transferToLookup');
+                var num = (this.value || '').replace(/\s/g, '');
+
+                if (num.length < 4) { el.textContent = ''; return; }
+
+                var userId = getStoredUser() && getStoredUser().id;
+                if (!userId) {
+                    console.error("Ошибка: userId не найден в памяти!");
+                    return;
+                }
+
+                console.log("Отправляю запрос на поиск карты:", num);
+                fetch('/users/' + userId + '/cards/lookup?number=' + encodeURIComponent(num))
+                    .then(function (r) {
+                        console.log("Сервер ответил, статус:", r.status);
+                        return r.ok ? r.json() : null;
+                    })
+                    .then(function (card) {
+                        console.log("Данные от сервера:", card);
+                        if (card) {
+                            transferToCardId = card.id;
+                            el.textContent = 'Карта найдена: ' + card.maskedNumber;
+                        }
+                        else { el.textContent = 'Карта с таким номером не найдена в БД'; }
+                    })
+                    .catch(function (err) {
+                        console.error("Ошибка при запросе fetch:", err);
+                    });
+            });
+
+            document.getElementById('btnTopUp').addEventListener('click', function () {
+                var user = getStoredUser();
+                if (!user || !user.id) { showMessage('Войдите в аккаунт', true); return; }
+                var cardId = document.getElementById('topUpCardId').value;
+                var amount = document.getElementById('topUpAmount').value;
+                if (!cardId) { showMessage('Выберите карту', true); return; }
+                if (!amount || parseFloat(amount) <= 0) { showMessage('Введите сумму', true); return; }
+                fetch('/users/' + user.id + '/cards/' + cardId + '/top-up', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: parseFloat(amount), sourceCardNumber: document.getElementById('topUpSourceCard').value || null })
+                })
+                    .then(function (r) {
+                        if (r.ok) return;
+                        return r.json().then(function (b) { throw new Error(b.message || 'Ошибка'); });
+                    })
+                    .then(function () { showMessage('Карта пополнена'); document.getElementById('topUpAmount').value = ''; loadAccountData(); })
+                    .catch(function (e) { showMessage(e.message || 'Ошибка', true); });
+            });
+
+            document.getElementById('btnTransfer').addEventListener('click', function () {
+                var user = getStoredUser();
+                if (!user || !user.id) { showMessage('Войдите в аккаунт', true); return; }
+
+                var fromId = document.getElementById('transferFromCardId').value;
+                var amount = document.getElementById('transferAmount').value;
+
+                if (!fromId) { showMessage('Выберите карту списания', true); return; }
+                if (!transferToCardId) { showMessage('Введите номер карты получателя (должна быть в БД)', true); return; }
+                if (!amount || parseFloat(amount) <= 0) { showMessage('Введите сумму', true); return; }
+
+                fetch('/users/' + user.id + '/transfers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fromCardId: parseInt(fromId, 10), toCardId: transferToCardId, amount: parseFloat(amount) })
+                })
+                    .then(function (r) {
+                        if (r.ok) return r.json();
+                        return r.json().then(function (b) { throw new Error(b.message || 'Ошибка'); });
+                    })
+                    .then(function () { showMessage('Перевод выполнен'); document.getElementById('transferAmount').value = ''; document.getElementById('transferToCardNumber').value = ''; document.getElementById('transferToLookup').textContent = ''; transferToCardId = null; loadAccountData(); })
+                    .catch(function (e) { showMessage(e.message || 'Ошибка перевода', true); });
+            });
+
+            document.getElementById('btnLogout').addEventListener('click', logout);
+            renderUsername();
+            loadAccountData();
+        })();
+    </script>
+</body>
+</html>
