@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile — Bank Cards</title>
+    <title>Профиль — Bank Cards</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: #f0f2f5; color: #1a1a2e; }
@@ -19,6 +19,43 @@
         nav a:hover { text-decoration: underline; }
         nav a.active { color: #0d6efd; text-decoration: underline; }
         main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+        .card { background: #fff; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 680px; }
+        .row { display: grid; grid-template-columns: 180px 1fr; gap: 0.75rem 1rem; padding: 0.45rem 0; border-bottom: 1px solid #eee; }
+        .row:last-child { border-bottom: none; }
+        .label { color: #666; }
+        .value { font-weight: 600; word-break: break-word; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .msg { padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.err { background: #f8d7da; color: #721c24; }
+        .toolbar-buttons { display: flex; gap: 0.5rem; }
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 24, 36, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1000;
+        }
+        .modal.open { display: flex; }
+        .modal-card {
+            width: 100%;
+            max-width: 520px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 14px 36px rgba(0,0,0,0.28);
+            padding: 1.2rem;
+        }
+        .modal-title { margin: 0 0 0.8rem; font-size: 1.1rem; }
+        .form-grid { display: grid; gap: 0.75rem; }
+        .form-grid label { font-weight: 600; color: #333; }
+        .form-grid input { width: 100%; padding: 0.55rem 0.65rem; border: 1px solid #d0d7de; border-radius: 8px; }
+        .modal-actions { margin-top: 0.9rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+        .btn-light { background: #f2f4f8; color: #1a1a2e; }
+        .btn-light:hover { background: #e8ebf2; }
     </style>
 </head>
 <body>
@@ -26,25 +63,238 @@
         <h1>Bank Cards</h1>
         <div class="user-info">
             <span class="username" id="displayUsername">User</span>
-            <a href="/authorization.html" class="btn btn-logout">Log Out</a>
+            <a href="/authorization.html" class="btn btn-logout" id="btnLogout">Выйти</a>
         </div>
     </header>
     <nav>
-        <a href="/account.html">Account</a>
-        <a href="/cards.html">My cards</a>
-        <a href="/transactions.html">Operations</a>
-        <a href="/profile.html" class="active">Profile</a>
+        <a href="/account.html">Счёт</a>
+        <a href="/cards.html">Мои карты</a>
+        <a href="/transactions.html">Операции</a>
+        <a href="/profile.html" class="active">Профиль</a>
     </nav>
     <main>
-        <h2>Profile</h2>
-        <p>Profile settings will be displayed here.</p>
+        <div id="message" class="msg"></div>
+        <div class="toolbar">
+            <h2 style="margin: 0;">Профиль</h2>
+            <div class="toolbar-buttons">
+                <button type="button" class="btn btn-primary" id="btnEditProfile">Изменить профиль</button>
+<!--                <button type="button" class="btn btn-primary" id="btnReload">Обновить</button>-->
+            </div>
+        </div>
+        <section class="card">
+            <div class="row"><div class="label">ФИО</div><div class="value" id="pFullName">—</div></div>
+            <div class="row"><div class="label">Email</div><div class="value" id="pEmail">—</div></div>
+            <div class="row"><div class="label">Телефон</div><div class="value" id="pPhoneNumber">—</div></div>
+        </section>
     </main>
+    <div class="modal" id="editProfileModal">
+        <div class="modal-card">
+            <h3 class="modal-title">Редактирование профиля</h3>
+            <div class="form-grid">
+                <label for="editLastName">Фамилия</label>
+                <input type="text" id="editLastName" placeholder="Иванов">
+
+                <label for="editFirstName">Имя</label>
+                <input type="text" id="editFirstName" placeholder="Иван">
+
+                <label for="editMiddleName">Отчество</label>
+                <input type="text" id="editMiddleName" placeholder="Иванович">
+
+                <label for="editEmail">Email</label>
+                <input type="email" id="editEmail" placeholder="example@mail.com">
+
+                <label for="editPhoneNumber">Телефон</label>
+                <input type="text" id="editPhoneNumber" placeholder="+79000000000">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-light" id="btnCancelProfileEdit">Отмена</button>
+                <button type="button" class="btn btn-primary" id="btnSaveProfile">Сохранить</button>
+            </div>
+        </div>
+    </div>
     <script>
         (function () {
-            try {
-                var u = JSON.parse(localStorage.getItem('bankUser') || '{}');
+            var STORAGE_USER = 'bankUser';
+            var STORAGE_TOKEN = 'bankToken';
+
+            // Reads currently logged-in user from localStorage.
+            function getStoredUser() {
+                try {
+                    var raw = localStorage.getItem(STORAGE_USER);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (_) { return null; }
+            }
+
+            // Shows temporary page-level message.
+            function showMessage(text, isError) {
+                var el = document.getElementById('message');
+                el.className = 'msg ' + (isError ? 'err' : '');
+                el.textContent = text;
+                el.style.display = 'block';
+                setTimeout(function () { el.style.display = 'none'; }, 3500);
+            }
+
+            function getAuthToken() {
+                return localStorage.getItem(STORAGE_TOKEN);
+            }
+
+            function authFetch(url, options) {
+                var token = getAuthToken();
+                if (!token) return Promise.resolve({ ok: false, status: 401, json: function () { return Promise.resolve({ message: 'Unauthorized' }); } });
+                var opts = options || {};
+                opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+                return fetch(url, opts);
+            }
+
+            // Writes text to page element or fallback dash.
+            function setText(id, value) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = value == null || value === '' ? '—' : String(value);
+            }
+
+            // Renders username in page header.
+            function renderUsername() {
+                var u = getStoredUser();
                 var el = document.getElementById('displayUsername');
-                if (el) el.textContent = u.fullName || u.email || 'User';
+                if (el) el.textContent = (u && (u.fullName || u.email)) || 'User';
+            }
+
+            function buildFullName(user) {
+                if (!user) return '';
+                return [user.lastName, user.firstName, user.middleName]
+                    .filter(function (part) { return part && String(part).trim(); })
+                    .join(' ')
+                    .trim();
+            }
+
+            // Persists fresh user values in localStorage.
+            function saveUserToStorage(user) {
+                if (!user) return;
+                var current = getStoredUser() || {};
+                current.id = user.id != null ? user.id : current.id;
+                current.lastName = user.lastName || current.lastName;
+                current.firstName = user.firstName || current.firstName;
+                current.middleName = user.middleName || current.middleName;
+                current.fullName = buildFullName(user) || user.fullName || current.fullName;
+                current.email = user.email || current.email;
+                current.phoneNumber = user.phoneNumber || current.phoneNumber;
+                localStorage.setItem(STORAGE_USER, JSON.stringify(current));
+            }
+
+            // Отображает значения профиля в разделе, доступном только для чтения.
+            function renderProfile(user) {
+                setText('pFullName', buildFullName(user) || (user && user.fullName));
+                setText('pEmail', user && user.email);
+                setText('pPhoneNumber', user && user.phoneNumber);
+                var lastNameInput = document.getElementById('editLastName');
+                var firstNameInput = document.getElementById('editFirstName');
+                var middleNameInput = document.getElementById('editMiddleName');
+                var emailInput = document.getElementById('editEmail');
+                var phoneNumberInput = document.getElementById('editPhoneNumber');
+                if (lastNameInput) lastNameInput.value = user && user.lastName ? user.lastName : '';
+                if (firstNameInput) firstNameInput.value = user && user.firstName ? user.firstName : '';
+                if (middleNameInput) middleNameInput.value = user && user.middleName ? user.middleName : '';
+                if (emailInput) emailInput.value = user && user.email ? user.email : '';
+                if (phoneNumberInput) phoneNumberInput.value = user && user.phoneNumber ? user.phoneNumber : '';
+            }
+
+            // Загрузка профиля
+            function loadProfile() {
+                var user = getStoredUser();
+                var userId = user && user.id;
+                if (!userId) {
+                    renderProfile(null);
+                    showMessage('Войдите в аккаунт', true);
+                    return;
+                }
+                authFetch('/users/' + userId)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data) {
+                            renderProfile(user);
+                            showMessage('Не удалось загрузить профиль', true);
+                            return;
+                        }
+                        saveUserToStorage(data);
+                        renderUsername();
+                        renderProfile(data);
+                    })
+                    .catch(function () {
+                        renderProfile(user);
+                        showMessage('Ошибка сети при загрузке профиля', true);
+                    });
+            }
+
+            function toggleEditModal(open) {
+                var modal = document.getElementById('editProfileModal');
+                if (!modal) return;
+                modal.classList[open ? 'add' : 'remove']('open');
+            }
+
+            // Отправляет обновленные данные профиля на бэк.
+            function saveProfile() {
+                var user = getStoredUser();
+                var userId = user && user.id;
+                if (!userId) { showMessage('Войдите в аккаунт', true); return; }
+
+                var lastName = (document.getElementById('editLastName').value || '').trim();
+                var firstName = (document.getElementById('editFirstName').value || '').trim();
+                var middleName = (document.getElementById('editMiddleName').value || '').trim();
+                var email = (document.getElementById('editEmail').value || '').trim();
+                var phoneNumber = (document.getElementById('editPhoneNumber').value || '').trim();
+                if (!lastName || !firstName || !middleName) { showMessage('Введите фамилию, имя и отчество', true); return; }
+                if (!email) { showMessage('Введите email', true); return; }
+                if (!phoneNumber) { showMessage('Введите телефон', true); return; }
+
+                authFetch('/users/' + userId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lastName: lastName,
+                        firstName: firstName,
+                        middleName: middleName,
+                        email: email,
+                        phoneNumber: phoneNumber
+                    })
+                })
+                    .then(function (r) {
+                        if (r.ok) return r.json();
+                        return r.json().then(function (b) { throw new Error(b.message || 'Ошибка обновления профиля'); })
+                            .catch(function () { throw new Error('Ошибка обновления профиля'); });
+                    })
+                    .then(function (updated) {
+                        saveUserToStorage(updated);
+                        renderUsername();
+                        renderProfile(updated);
+                        toggleEditModal(false);
+                        showMessage('Профиль успешно обновлён', false);
+                    })
+                    .catch(function (e) {
+                        showMessage(e.message || 'Ошибка обновления профиля', true);
+                    });
+            }
+
+            // Clears auth state and redirects to login page.
+            function logout() {
+                localStorage.removeItem(STORAGE_USER);
+                localStorage.removeItem(STORAGE_TOKEN);
+                window.location.href = '/authorization.html';
+            }
+
+            var btnReload = document.getElementById('btnReload');
+            if (btnReload) btnReload.addEventListener('click', loadProfile);
+            var btnEditProfile = document.getElementById('btnEditProfile');
+            if (btnEditProfile) btnEditProfile.addEventListener('click', function () { toggleEditModal(true); });
+            var btnCancelProfileEdit = document.getElementById('btnCancelProfileEdit');
+            if (btnCancelProfileEdit) btnCancelProfileEdit.addEventListener('click', function () { toggleEditModal(false); });
+            var btnSaveProfile = document.getElementById('btnSaveProfile');
+            if (btnSaveProfile) btnSaveProfile.addEventListener('click', saveProfile);
+            var btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) btnLogout.addEventListener('click', function (e) { e.preventDefault(); logout(); });
+
+            try {
+                renderUsername();
+                loadProfile();
             } catch (_) {}
         })();
     </script>

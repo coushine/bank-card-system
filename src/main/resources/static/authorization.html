@@ -2,52 +2,164 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Авторизация</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация — Bank Cards</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #1a1a2e;
+        }
+        .card {
+            width: 100%;
+            max-width: 430px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.5rem; }
+        .subtitle { margin: 0 0 20px; color: #5d6475; font-size: 0.95rem; }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            border: 1px solid #c9ced8;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+        .btn {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .link-row {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.92rem;
+        }
+        .link-row a {
+            color: #0d6efd;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .link-row a:hover { text-decoration: underline; }
+        .msg {
+            display: none;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        .msg.ok { display: block; background: #d1e7dd; color: #0f5132; }
+        .msg.err { display: block; background: #f8d7da; color: #842029; }
+    </style>
 </head>
 <body>
+<main class="card">
+    <h1>Авторизация</h1>
+    <p class="subtitle">Войдите в ваш аккаунт</p>
+    <div id="message" class="msg"></div>
 
-<h2>Авторизация пользователя</h2>
+    <form id="loginForm">
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="name@example.com">
 
-<form id="loginForm">
-    <label>Email:</label><br>
-    <input type="text" id="email" required><br><br>
+        <label for="password">Пароль</label>
+        <input type="password" id="password" required placeholder="Введите пароль">
 
-    <label>Пароль:</label><br>
-    <input type="password" id="password" required><br><br>
-
-    <button type="button" onclick="enter()">Войти</button>
-
-    <!-- кнопка ведёт на страницу регистрации -->
-    <button type="button" onclick="goToRegistration()">Зарегистрироваться</button>
-</form>
+        <button type="submit" class="btn btn-primary">Войти</button>
+    </form>
+    <div class="link-row">Нет аккаунта? <a href="/registration.html">Зарегистрироваться</a></div>
+</main>
 
 <script>
-    function enter() {
-        const user = {
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value,
-        };
+    (function () {
+        var STORAGE_USER = "bankUser";
+        var STORAGE_TOKEN = "bankToken";
 
-        fetch("/users/authorization", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(user)
-        })
-            .then(function(response) { return response.ok ? response.json() : Promise.reject(); })
-            .then(function(data) {
-                try {
-                    var stored = { id: data.id, email: data.email, fullName: data.fullName };
-                    localStorage.setItem("bankUser", JSON.stringify(stored));
-                } catch (e) {}
-                alert("Авторизация прошла успешно");
-                window.location.href = "/account.html";
+        function showMessage(text, isError) {
+            var box = document.getElementById("message");
+            box.className = "msg " + (isError ? "err" : "ok");
+            box.textContent = text;
+        }
+
+        function enter(event) {
+            event.preventDefault();
+            var email = document.getElementById("email").value.trim();
+            var password = document.getElementById("password").value;
+            if (!email || !password) {
+                showMessage("Заполните Email и пароль", true);
+                return;
+            }
+
+            var user = { email: email, password: password };
+
+            fetch("/users/authorization", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(user)
             })
-            .catch(function() { alert("Ошибка авторизации"); });
-    }
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error("Неверный Email или пароль");
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    try {
+                        var userData = data && data.user ? data.user : data;
+                        var fullName = [userData.lastName, userData.firstName, userData.middleName]
+                            .filter(function (part) { return part && String(part).trim(); })
+                            .join(" ")
+                            .trim();
+                        var stored = {
+                            id: userData.id,
+                            email: userData.email,
+                            fullName: fullName || userData.fullName,
+                            lastName: userData.lastName,
+                            firstName: userData.firstName,
+                            middleName: userData.middleName,
+                            phoneNumber: userData.phoneNumber
+                        };
+                        localStorage.setItem(STORAGE_USER, JSON.stringify(stored));
+                        if (data && data.token) {
+                            localStorage.setItem(STORAGE_TOKEN, data.token);
+                        }
+                    } catch (_) {}
+                    showMessage("Успешный вход. Переход в личный кабинет...", false);
+                    setTimeout(function () { window.location.href = "/account.html"; }, 700);
+                })
+                .catch(function (err) {
+                    showMessage(err.message || "Ошибка авторизации", true);
+                });
+        }
 
-    function goToRegistration() {
-        window.location.href = "/registration.html";  // ← сюда подставь свой путь
-    }
+        document.getElementById("loginForm").addEventListener("submit", enter);
+    })();
 </script>
 
 </body>

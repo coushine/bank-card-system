@@ -51,10 +51,10 @@ public class TransferServiceImpl implements TransferService {
         int fromId = dto.getFromCardId().intValue();
         int toId = dto.getToCardId().intValue();
         if (fromId == toId) {
-            throw new IncorrectDataException("Source and target card must be different");
+            throw new IncorrectDataException("Карты должны различаться");
         }
-        CardEntity fromCard = cardRepository.findById(fromId).orElseThrow(() -> new IncorrectDataException("Source card not found"));
-        CardEntity toCard = cardRepository.findById(toId).orElseThrow(() -> new IncorrectDataException("Target card not found"));
+        CardEntity fromCard = cardRepository.findById(fromId).orElseThrow(() -> new IncorrectDataException("Карты не найдена"));
+        CardEntity toCard = cardRepository.findById(toId).orElseThrow(() -> new IncorrectDataException("Карта для перевода не найдена"));
         if (fromCard.getUser().getId() != userId) {
             throw new IncorrectDataException("Source card does not belong to you");
         }
@@ -76,13 +76,37 @@ public class TransferServiceImpl implements TransferService {
 
     @Override
     @Transactional
-    public void topUp(long userId, int cardId, BigDecimal amount) {
-        CardEntity card = cardRepository.findById(cardId).orElseThrow(() -> new IncorrectDataException("Card not found"));
-        if (card.getUser().getId() != userId) {
-            throw new IncorrectDataException("Card does not belong to you");
+    public void topUp(long userId, int cardId, BigDecimal amount, String sourceCardNumber) { //Пополнение
+        CardEntity toCard = cardRepository.findById(cardId)
+                .orElseThrow(() -> new IncorrectDataException("Карта не найдена"));
+        if (toCard.getUser().getId() != userId) {
+            throw new IncorrectDataException("Введите корректный номер карты");
         }
-        card.setBalance(card.getBalance().add(amount));
-        cardRepository.save(card);
+
+        String sourceDigits = sourceCardNumber == null ? "" : sourceCardNumber.replaceAll("\\D", "");
+        CardEntity fromCard = cardRepository.findAll().stream()
+                .filter(c -> c.getNumber() != null && c.getNumber().replaceAll("\\D", "").equals(sourceDigits))
+                .findFirst()
+                .orElseThrow(() -> new IncorrectDataException("Карта не найдена"));
+
+        if (fromCard.getId() == toCard.getId()) {
+            throw new IncorrectDataException("Карты должны отличаться");
+        }
+        if (fromCard.getBalance().compareTo(amount) < 0) {
+            throw new IncorrectDataException("Недостаточно средств на карте");
+        }
+
+        fromCard.setBalance(fromCard.getBalance().subtract(amount));
+        toCard.setBalance(toCard.getBalance().add(amount));
+        cardRepository.save(fromCard);
+        cardRepository.save(toCard);
+
+        TransferEntity tx = new TransferEntity();
+        tx.setTransferTime(LocalDateTime.now());
+        tx.setFromCard(fromCard);
+        tx.setToCard(toCard);
+        tx.setAmount(amount);
+        transferRepository.save(tx);
     }
 
     @Override

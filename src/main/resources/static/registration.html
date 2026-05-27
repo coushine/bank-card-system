@@ -2,54 +2,199 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Регистрация</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — Bank Cards</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #1a1a2e;
+        }
+        .card {
+            width: 100%;
+            max-width: 460px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.5rem;
+        }
+        .subtitle {
+            margin: 0 0 20px;
+            color: #5d6475;
+            font-size: 0.95rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            border: 1px solid #c9ced8;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+        .btn {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .actions { margin-top: 6px; }
+        .link-row {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.92rem;
+        }
+        .link-row a {
+            color: #0d6efd;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .link-row a:hover { text-decoration: underline; }
+        .msg {
+            display: none;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        .msg.ok { display: block; background: #d1e7dd; color: #0f5132; }
+        .msg.err { display: block; background: #f8d7da; color: #842029; }
+    </style>
 </head>
 <body>
+<main class="card">
+    <h1>Регистрация</h1>
+    <p class="subtitle">Создайте аккаунт для работы с картами</p>
+    <div id="message" class="msg"></div>
 
-<h2>Регистрация пользователя</h2>
+    <form id="regForm">
+        <label for="lastName">Фамилия</label>
+        <input type="text" id="lastName" required placeholder="Иванов">
 
-<form id="regForm">
-    <label>Email:</label><br>
-    <input type="text" id="email" required><br><br>
+        <label for="firstName">Имя</label>
+        <input type="text" id="firstName" required placeholder="Иван">
 
-    <label>Полное имя:</label><br>
-    <input type="text" id="fullName" required><br><br>
+        <label for="middleName">Отчество</label>
+        <input type="text" id="middleName" required placeholder="Иванович">
 
-    <label>Пароль:</label><br>
-    <input type="password" id="password" required><br><br>
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="name@example.com">
 
-    <label>Роль:</label><br>
-    <select id="role">
-        <option value="USER">user</option>
-        <option value="ADMIN">admin</option>
-    </select>
-    <br><br>
+        <label for="phoneNumber">Номер телефона (РФ)</label>
+        <input type="tel" id="phoneNumber" required placeholder="+7 900 123 45 67">
 
-    <button type="button" onclick="register()">Зарегистрироваться</button>
-</form>
+        <label for="password">Пароль</label>
+        <input type="password" id="password" required minlength="6" placeholder="Минимум 6 символов">
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+        </div>
+    </form>
+    <div class="link-row">Уже есть аккаунт? <a href="/authorization.html">Войти</a></div>
+</main>
 
 <script>
-    function register() { //Она будет вызвана, когда пользователь нажмёт кнопку "Зарегистрироваться".
+    (function () {
+        function normalizeRussianPhone(input) {
+            var digits = (input || "").replace(/\D/g, "");
+            if (digits.length !== 11 || (digits[0] !== "7" && digits[0] !== "8")) {
+                return null;
+            }
+            return "+7" + digits.slice(1);
+        }
 
-        //Создание JavaScript-объекта user из данных формы
-        const user = {
-            email: document.getElementById("email").value,
-            fullName: document.getElementById("fullName").value,
-            password: document.getElementById("password").value,
-            role: document.getElementById("role").value
-        };
+        function showMessage(text, isError) {
+            var box = document.getElementById("message");
+            box.className = "msg " + (isError ? "err" : "ok");
+            box.textContent = text;
+        }
 
-        //Отправка данных на backend через fetch()
-        fetch("/users/registration", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(user) //объект user преобразуется в JSON-строку.
-        })
-            //Получение ответа от сервера и преобразование в JSON
-            .then(r => r.json()) //r — ответ сервера (HTTP response)
-            .then(data => alert("Регистрация успешна! ID пользователя: " + data.id))
-            .catch(err => alert("Ошибка: " + err));
-    }
+        function register(event) {
+            event.preventDefault();
+
+            var lastName = document.getElementById("lastName").value.trim();
+            var firstName = document.getElementById("firstName").value.trim();
+            var middleName = document.getElementById("middleName").value.trim();
+            var email = document.getElementById("email").value.trim();
+            var phoneRaw = document.getElementById("phoneNumber").value.trim();
+            var password = document.getElementById("password").value;
+            var phoneNumber = normalizeRussianPhone(phoneRaw);
+
+            if (!lastName || !firstName || !middleName) {
+                showMessage("Заполните фамилию, имя и отчество", true);
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMessage("Введите корректный Email", true);
+                return;
+            }
+            if (!phoneNumber) {
+                showMessage("Введите номер РФ в формате +7XXXXXXXXXX или 8XXXXXXXXXX", true);
+                return;
+            }
+            if (!password || password.length < 6) {
+                showMessage("Пароль должен содержать минимум 6 символов", true);
+                return;
+            }
+
+            var user = {
+                email: email,
+                lastName: lastName,
+                firstName: firstName,
+                middleName: middleName,
+                phoneNumber: phoneNumber,
+                password: password
+            };
+
+            fetch("/users/registration", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(user)
+            })
+                .then(function (r) {
+                    if (!r.ok) {
+                        return r.json()
+                            .then(function (body) { throw new Error(body.message || "Ошибка регистрации"); })
+                            .catch(function () { throw new Error("Ошибка регистрации"); });
+                    }
+                    return r.json();
+                })
+                .then(function () {
+                    showMessage("Регистрация прошла успешно. Выполняется переход на вход...", false);
+                    setTimeout(function () { window.location.href = "/authorization.html"; }, 1200);
+                })
+                .catch(function (err) {
+                    showMessage(err.message || "Ошибка регистрации", true);
+                });
+        }
+
+        document.getElementById("regForm").addEventListener("submit", register);
+    })();
 </script>
 
 </body>

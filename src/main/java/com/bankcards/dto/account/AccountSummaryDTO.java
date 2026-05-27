@@ -3,10 +3,13 @@ package com.bankcards.dto.account;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 public class AccountSummaryDTO {
+
+    //Баланс всех карт
     private BigDecimal totalBalance;
     private int cardsCount;
     private List<CardSummaryItem> cards;
@@ -25,6 +28,7 @@ public class AccountSummaryDTO {
         private Long toCardId;
         private String toCardMaskedNumber;
         private BigDecimal amount;
-        private String description; // e.g. "To **** 1234" or "From **** 5678"
+        private String description;
+        private LocalDateTime transferTime;
     }
 }

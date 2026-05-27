@@ -1,24 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operations — Bank Cards</title>
+    <title>Операции — Bank Cards</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: #f0f2f5; color: #1a1a2e; }
-        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         .header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-        .header .user-info { display: flex; align-items: center; gap: 1rem; }
-        .header .username { font-weight: 500; opacity: 0.95; }
-        .btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; text-decoration: none; display: inline-block; }
-        .btn-logout { background: rgba(255,255,255,0.15); color: #fff; }
-        .btn-logout:hover { background: rgba(255,255,255,0.25); }
-        nav { background: #fff; padding: 0.75rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        nav a { margin-right: 1.5rem; color: #1a1a2e; text-decoration: none; font-weight: 500; }
-        nav a:hover { text-decoration: underline; }
-        nav a.active { color: #0d6efd; text-decoration: underline; }
-        main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;}
+        .header .username {
+            font-weight: 500;
+            opacity: 0.95; }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block; }
+        .btn-logout {
+            background: rgba(255,255,255,0.15);
+            color: #fff; }
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.25); }
+        nav {
+            background: #fff;
+            padding: 0.75rem 2rem; box-shadow:
+                0 1px 3px rgba(0,0,0,0.08); }
+        nav a { margin-right: 1.5rem;
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: 500; }
+        nav a:hover {
+            text-decoration: underline; }
+        nav a.active {
+            color: #0d6efd;
+            text-decoration: underline; }
+        main {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem; }
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem; }
+        .btn-primary {
+            background: #0d6efd;
+            color: #fff; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .msg {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none; }
+        .msg.err {
+            background: #f8d7da;
+            color: #721c24; }
+        .tx-list {
+            list-style: none;
+            padding: 0; margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem; }
+        .tx-item {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem; }
+        .tx-item .desc { color: #1a1a2e; }
+        .tx-item .cards {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.2rem; }
+        .tx-item .time {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-top: 0.25rem; }
+        .tx-item .amount {
+            font-weight: 700;
+            white-space: nowrap; }
+        .tx-item .amount.outcome { color: #dc3545; }
+        .tx-item .amount.income { color: #198754; }
+        .empty-state {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            color: #888;
+            text-align: center; }
     </style>
 </head>
 <body>
@@ -26,25 +115,201 @@
         <h1>Bank Cards</h1>
         <div class="user-info">
             <span class="username" id="displayUsername">User</span>
-            <a href="/authorization.html" class="btn btn-logout">Log Out</a>
+            <a href="/authorization.html" class="btn btn-logout" id="btnLogout">Выйти</a>
         </div>
     </header>
     <nav>
-        <a href="/account.html">Account</a>
-        <a href="/cards.html">My cards</a>
-        <a href="/transactions.html" class="active">Operations</a>
-        <a href="/profile.html">Profile</a>
+        <a href="/account.html">Счёт</a>
+        <a href="/cards.html">Мои карты</a>
+        <a href="/transactions.html" class="active">Операции</a>
+        <a href="/profile.html">Профиль</a>
     </nav>
     <main>
-        <h2>Operations</h2>
-        <p>Transaction history will be displayed here.</p>
+        <div id="message" class="msg"></div>
+        <div class="toolbar">
+            <div>
+                <button type="button" class="btn btn-ai" id="btnAiAnalyze" style="background: #6f42c1; color: white;">
+                    ✨ Анализ расходов
+                </button>
+                <button type="button" class="btn btn-primary" id="btnReload">Обновить</button>
+            </div>
+        </div>
+        <div id="aiResponse" style="display:none; background: #fff; border-left: 4px solid #6f42c1; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <strong style="color: #6f42c1;">ИИ-Ассистент:</strong>
+            <p id="aiText" style="margin: 0.5rem 0 0; font-size: 0.95rem; line-height: 1.5;"></p>
+        </div>
+        <ul id="transactionsList" class="tx-list">
+            <li class="empty-state">Загрузка...</li>
+        </ul>
     </main>
+
     <script>
         (function () {
-            try {
-                var u = JSON.parse(localStorage.getItem('bankUser') || '{}');
+            var STORAGE_USER = 'bankUser';
+            var STORAGE_TOKEN = 'bankToken';
+
+            // Reads currently logged-in user from localStorage.
+            function getStoredUser() {
+                try {
+                    var raw = localStorage.getItem(STORAGE_USER);
+                    return raw ? JSON.parse(raw) : null;
+                } catch (_) { return null; }
+            }
+
+            // Formats number as money string.
+            function formatMoney(amount) {
+                if (amount == null || amount === undefined) return '—';
+                var n = Number(amount);
+                return isNaN(n) ? '—' : n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+            }
+
+            // Escapes text before rendering into HTML.
+            function escapeHtml(s) {
+                var div = document.createElement('div');
+                div.textContent = s == null ? '' : String(s);
+                return div.innerHTML;
+            }
+
+            // Shows temporary page-level message.
+            function showMessage(text, isError) {
+                var el = document.getElementById('message');
+                el.className = 'msg ' + (isError ? 'err' : '');
+                el.textContent = text;
+                el.style.display = 'block';
+                setTimeout(function () { el.style.display = 'none'; }, 3500);
+            }
+
+            function getAuthToken() {
+                return localStorage.getItem(STORAGE_TOKEN);
+            }
+
+            function authFetch(url, options) {
+                var token = getAuthToken();
+                if (!token) return Promise.resolve({ ok: false, status: 401, json: function () { return Promise.resolve({ message: 'Unauthorized' }); } });
+                var opts = options || {};
+                opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+                return fetch(url, opts);
+            }
+
+            // Renders username in header.
+            function renderUsername() {
+                var u = getStoredUser();
                 var el = document.getElementById('displayUsername');
-                if (el) el.textContent = u.fullName || u.email || 'User';
+                if (el) el.textContent = (u && (u.fullName || u.email)) || 'User';
+            }
+
+            // Formats ISO date into local readable text.
+            function formatDateTime(value) {
+                if (!value) return '—';
+                var d = new Date(value);
+                if (isNaN(d.getTime())) return '—';
+                return d.toLocaleString('ru-RU');
+            }
+
+            // Renders operations list.
+            function renderTransactions(items) {
+                var list = document.getElementById('transactionsList');
+                if (!list) return;
+
+                if (!items || items.length === 0) {
+                    list.innerHTML = '<li class="empty-state">Операций пока нет</li>';
+                    return;
+                }
+
+                list.innerHTML = items.map(function (tx) {
+                    var amount = Number(tx.amount);
+                    var isOut = !isNaN(amount) && amount < 0;
+                    var amountClass = isOut ? 'outcome' : 'income';
+                    var sign = isOut ? '−' : '+';
+                    var fromCard = escapeHtml(tx.fromCardMaskedNumber || '—');
+                    var toCard = escapeHtml(tx.toCardMaskedNumber || '—');
+                    var desc = escapeHtml(tx.description || 'Операция');
+                    var dateTime = formatDateTime(tx.transferTime);
+
+                    return '<li class="tx-item">' +
+                        '<div><div class="desc">' + desc + '</div><div class="cards">' + fromCard + ' → ' + toCard + '</div><div class="time">' + dateTime + '</div></div>' +
+                        '<div class="amount ' + amountClass + '">' + sign + formatMoney(Math.abs(amount)) + '</div>' +
+                        '</li>';
+                }).join('');
+            }
+
+            // Loads recent operations from account summary endpoint.
+            function loadTransactions() {
+                var user = getStoredUser();
+                var userId = user && user.id;
+                if (!userId) {
+                    renderTransactions([]);
+                    showMessage('Войдите в аккаунт', true);
+                    return;
+                }
+
+                authFetch('/users/' + userId + '/summary')
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data) {
+                            renderTransactions([]);
+                            showMessage('Не удалось загрузить операции', true);
+                            return;
+                        }
+                        renderTransactions(data.recentTransactions || []);
+                    })
+                    .catch(function () {
+                        renderTransactions([]);
+                        showMessage('Ошибка сети при загрузке операций', true);
+                    });
+            }
+
+            // Функция для вызова ИИ анализа
+            function analyzeWithAi() {
+                var user = getStoredUser();
+                if (!user || !user.id) {
+                    showMessage('Войдите в аккаунт', true);
+                    return;
+                }
+
+                var btn = document.getElementById('btnAiAnalyze');
+                var responseBox = document.getElementById('aiResponse');
+                var aiText = document.getElementById('aiText');
+
+                btn.disabled = true;
+                btn.textContent = 'Анализирую...';
+
+                authFetch('/api/ai/analyze/' + user.id)
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (data && data.result) {
+                            aiText.textContent = data.result;
+                            responseBox.style.display = 'block';
+                        } else {
+                            showMessage('ИИ временно недоступен', true);
+                        }
+                    })
+                    .catch(function () {
+                        showMessage('Ошибка связи с ИИ', true);
+                    })
+                    .finally(function() {
+                        btn.disabled = false;
+                        btn.textContent = '✨ Анализ расходов';
+                    });
+            }
+            var btnAi = document.getElementById('btnAiAnalyze');
+            if (btnAi) btnAi.addEventListener('click', analyzeWithAi);
+
+            // Clears auth state and redirects to login page.
+            function logout() {
+                localStorage.removeItem(STORAGE_USER);
+                localStorage.removeItem(STORAGE_TOKEN);
+                window.location.href = '/authorization.html';
+            }
+
+            var btnReload = document.getElementById('btnReload');
+            if (btnReload) btnReload.addEventListener('click', loadTransactions);
+            var btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) btnLogout.addEventListener('click', function (e) { e.preventDefault(); logout(); });
+
+            try {
+                renderUsername();
+                loadTransactions();
             } catch (_) {}
         })();
     </script>

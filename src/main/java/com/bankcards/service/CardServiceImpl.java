@@ -13,6 +13,8 @@ import com.bankcards.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CardServiceImpl implements CardService {
+
+    private static final Logger log = LoggerFactory.getLogger(CardServiceImpl.class);
 
     @Autowired
     private CardRepository cardRepository;
@@ -34,10 +38,22 @@ public class CardServiceImpl implements CardService {
         return "**** **** **** " + digits.substring(digits.length() - 4);
     }
 
+    private static String normalizeCardNumber(String rawNumber) {
+        if (rawNumber == null) {
+            throw new IncorrectDataException("Card number is required");
+        }
+        String digits = rawNumber.replaceAll("\\D", "");
+        if (digits.length() != 16) {
+            throw new IncorrectDataException("Card number must contain 16 digits");
+        }
+        return digits.replaceAll("(\\d{4})(?=\\d)", "$1 ").trim();
+    }
+
     private static CardDTO toDto(CardEntity e) {
         CardDTO dto = new CardDTO();
         dto.setId((long) e.getId());
         dto.setMaskedNumber(maskNumber(e.getNumber()));
+        dto.setFullNumber(e.getNumber());
         dto.setBalance(e.getBalance());
         dto.setExpiryDate(e.getExpiryDate());
         dto.setStatus(e.getStatus());
@@ -53,8 +69,9 @@ public class CardServiceImpl implements CardService {
     @Override
     @Transactional
     public CardDTO addCard(long userId, CreateCardDTO dto) {
-        UserEntity user = userRepository.findById((long) userId).orElseThrow(() -> new IncorrectDataException("User not found"));
-        String number = dto.getNumber().replaceAll("\\s+", "");
+        UserEntity user = userRepository.findById((long) userId).orElseThrow(() ->
+                new IncorrectDataException("User not found"));
+        String number = normalizeCardNumber(dto.getNumber());
         if (cardRepository.findByNumber(number).isPresent()) {
             throw new DuplicateResourceException("Card with this number already exists");
         }
@@ -72,7 +89,8 @@ public class CardServiceImpl implements CardService {
     @Override
     @Transactional
     public void deleteCard(long userId, int cardId) {
-        CardEntity card = cardRepository.findById(cardId).orElseThrow(() -> new IncorrectDataException("Card not found"));
+        CardEntity card = cardRepository.findById(cardId).orElseThrow(()
+                -> new IncorrectDataException("Card not found"));
         if (card.getUser().getId() != userId) {
             throw new IncorrectDataException("Card does not belong to user");
         }
@@ -82,7 +100,8 @@ public class CardServiceImpl implements CardService {
     @Override
     @Transactional
     public CardDTO reissueCard(long userId, int cardId) {
-        CardEntity card = cardRepository.findById(cardId).orElseThrow(() -> new IncorrectDataException("Card not found"));
+        CardEntity card = cardRepository.findById(cardId).orElseThrow(()
+                -> new IncorrectDataException("Card not found"));
         if (card.getUser().getId() != userId) {
             throw new IncorrectDataException("Card does not belong to user");
         }
@@ -102,7 +121,29 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public CardDTO findCardByNumber(String number) {
-        String normalized = number == null ? "" : number.replaceAll("\\s+", "");
-        return cardRepository.findByNumber(normalized).map(CardServiceImpl::toDto).orElse(null);
+        if (number == null) return null;
+
+        String inputDigitsOnly = number.replaceAll("\\D", "");
+        if (inputDigitsOnly.isEmpty()) return null;
+
+        log.info("lookup card number raw='{}' digitsOnly='{}'", number, inputDigitsOnly);
+
+        String formattedInput = inputDigitsOnly.replaceAll("(\\d{4})(?=\\d)", "$1 ").trim();
+        CardDTO exact = cardRepository.findByNumber(formattedInput).map(CardServiceImpl::toDto).orElse(null);
+        if (exact != null) return exact;
+
+        CardDTO fallback = cardRepository.findAll().stream()
+                .filter(c -> c.getNumber() != null && c.getNumber().replaceAll("\\D", "")
+                        .equals(inputDigitsOnly))
+                .findFirst()
+                .map(CardServiceImpl::toDto)
+                .orElse(null);
+
+        if (fallback != null) {
+            log.info("lookup card found by fallback. id={}", fallback.getId());
+        } else {
+            log.info("lookup card not found for digitsOnly='{}'", inputDigitsOnly);
+        }
+        return fallback;
     }
 }

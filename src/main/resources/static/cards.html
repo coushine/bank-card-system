@@ -19,14 +19,58 @@
         .btn-danger { background: #dc3545; color: #fff; }
         .btn-danger:hover { background: #bb2d3b; }
         .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.8rem; }
+
         nav { background: #fff; padding: 0.75rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
         nav a { margin-right: 1.5rem; color: #1a1a2e; text-decoration: none; font-weight: 500; }
         nav a:hover { text-decoration: underline; }
         nav a.active { color: #0d6efd; text-decoration: underline; }
+
         main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
-        .card-list { display: flex; flex-direction: column; gap: 1rem; }
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem; }
         .card-item { background: #fff; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-        .card-item .info .number { font-weight: 600; font-size: 1.1rem; }
+
+        .card-item .info .number-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .card-item .info .number {
+            font-weight: 600;
+            font-size: 1.1rem;}
+
+        .btn-eye {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px 6px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            background: #f0f2f5;}
+        .btn-eye:hover {
+            background: #e0e2e6;
+            transform: scale(1.05);
+            color: #0d6efd;}
+        .btn-eye:active {
+            transform: scale(0.95);}
+        .btn-eye.active {
+            background: #0d6efd;
+            color: white;
+            opacity: 0.8;}
+        .btn-eye {
+            position: relative;
+        }
+
         .card-item .info .expiry { color: #666; font-size: 0.9rem; }
         .card-item .balance { font-weight: 700; color: #0d6efd; }
         .card-item .actions { display: flex; gap: 0.5rem; }
@@ -55,6 +99,7 @@
         <a href="/transactions.html">Операции</a>
         <a href="/profile.html">Профиль</a>
     </nav>
+
     <main>
         <div id="message"></div>
         <div class="form-box">
@@ -70,15 +115,20 @@
             <div class="empty-state">Загрузка…</div>
         </div>
     </main>
+
     <script>
         (function () {
             var STORAGE_USER = 'bankUser';
+            var STORAGE_TOKEN = 'bankToken';
+
+            //Достает id пользователя из памяти браузера
             function getUserId() {
                 try {
                     var u = JSON.parse(localStorage.getItem(STORAGE_USER) || '{}');
                     return u.id;
                 } catch (_) { return null; }
             }
+
             function showMessage(text, isError) {
                 var el = document.getElementById('message');
                 el.className = 'msg ' + (isError ? 'err' : 'ok');
@@ -86,50 +136,59 @@
                 el.style.display = 'block';
                 setTimeout(function() { el.style.display = 'none'; }, 4000);
             }
+
+            function getAuthToken() {
+                return localStorage.getItem(STORAGE_TOKEN);
+            }
+
+            function authFetch(url, options) {
+                var token = getAuthToken();
+                if (!token) return Promise.resolve({ ok: false, status: 401, json: function () { return Promise.resolve({ message: 'Unauthorized' }); } });
+                var opts = options || {};
+                opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+                return fetch(url, opts);
+            }
             function formatMoney(amount) {
                 if (amount == null) return '—';
                 var n = Number(amount);
                 return isNaN(n) ? '—' : n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
             }
+
+            //Загружает и отображает список банковских карт пользователя
             function loadCards() {
                 var userId = getUserId();
                 if (!userId) { document.getElementById('cardList').innerHTML = '<div class="empty-state">Войдите в аккаунт</div>'; return; }
-                fetch('/users/' + userId + '/cards')
+
+                authFetch('/users/' + userId + '/cards')
                     .then(function(r) { return r.ok ? r.json() : []; })
                     .then(function(cards) {
                         var list = document.getElementById('cardList');
-                        if (!cards.length) { list.innerHTML = '<div class="empty-state">Нет карт. Добавьте первую.</div>'; return; }
-                        list.innerHTML = cards.map(function(c) {
-                            return '<div class="card-item" data-card-id="' + c.id + '">' +
-                                '<div class="info"><div class="number">' + escapeHtml(c.maskedNumber) + '</div><div class="expiry">До ' + (c.expiryDate || '—') + ' · ' + (c.status || 'ACTIVE') + '</div></div>' +
-                                '<div class="balance">' + formatMoney(c.balance) + '</div>' +
-                                '<div class="actions">' +
-                                '<button type="button" class="btn btn-sm btn-primary btn-reissue" data-id="' + c.id + '">Перевыпуск</button>' +
-                                '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' + c.id + '">Удалить</button>' +
-                                '</div></div>';
-                        }).join('');
-                        list.querySelectorAll('.btn-delete').forEach(function(btn) {
-                            btn.addEventListener('click', function() { deleteCard(parseInt(btn.getAttribute('data-id'), 10)); });
-                        });
-                        list.querySelectorAll('.btn-reissue').forEach(function(btn) {
-                            btn.addEventListener('click', function() { reissueCard(parseInt(btn.getAttribute('data-id'), 10)); });
-                        });
+                        if (!cards.length) { list.innerHTML = '<div class="empty-state">Нет карт.</div>'; return; }
+
+                        // Отрисовываем карты
+                        list.innerHTML = renderCards(cards);
+
+                        // Навешиваем обработчики для кнопок
+                        attachCardButtons();
+                        attachEyeButtons();
                     })
                     .catch(function() { document.getElementById('cardList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>'; });
             }
+
             function escapeHtml(s) {
                 var div = document.createElement('div');
                 div.textContent = s;
                 return div.innerHTML;
             }
+
             function addCard() {
                 var userId = getUserId();
                 if (!userId) { showMessage('Войдите в аккаунт', true); return; }
-                var number = (document.getElementById('newCardNumber').value || '').replace(/\s/g, '');
+                var number = (document.getElementById('newCardNumber').value || '').replace(/\D/g, '');
                 var expiry = document.getElementById('newCardExpiry').value;
                 if (!number || number.length < 4) { showMessage('Введите номер карты', true); return; }
                 if (!expiry) { showMessage('Укажите срок действия', true); return; }
-                fetch('/users/' + userId + '/cards', {
+                authFetch('/users/' + userId + '/cards', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ number: number, expiryDate: expiry })
@@ -141,28 +200,99 @@
                     .then(function() { showMessage('Карта добавлена'); document.getElementById('newCardNumber').value = ''; document.getElementById('newCardExpiry').value = ''; loadCards(); })
                     .catch(function(e) { showMessage(e.message || 'Ошибка добавления карты', true); });
             }
+
             function deleteCard(cardId) {
                 if (!confirm('Удалить карту?')) return;
                 var userId = getUserId();
                 if (!userId) return;
-                fetch('/users/' + userId + '/cards/' + cardId, { method: 'DELETE' })
+                authFetch('/users/' + userId + '/cards/' + cardId, { method: 'DELETE' })
                     .then(function(r) { if (r.ok) { showMessage('Карта удалена'); loadCards(); } else return r.json().then(function(b) { throw new Error(b.message || 'Ошибка'); }); })
                     .catch(function(e) { showMessage(e.message || 'Ошибка удаления', true); });
             }
+
+            //Перевыпуск карты
             function reissueCard(cardId) {
                 var userId = getUserId();
                 if (!userId) return;
-                fetch('/users/' + userId + '/cards/' + cardId + '/reissue', { method: 'PUT' })
+                authFetch('/users/' + userId + '/cards/' + cardId + '/reissue', { method: 'PUT' })
                     .then(function(r) { if (r.ok) { showMessage('Срок действия обновлён'); loadCards(); } else return r.json().then(function(b) { throw new Error(b.message || 'Ошибка'); }); })
                     .catch(function(e) { showMessage(e.message || 'Ошибка перевыпуска', true); });
             }
-            document.getElementById('btnLogout').addEventListener('click', function() { localStorage.removeItem(STORAGE_USER); window.location.href = '/authorization.html'; });
+            document.getElementById('btnLogout').addEventListener('click', function() { localStorage.removeItem(STORAGE_USER); localStorage.removeItem(STORAGE_TOKEN); window.location.href = '/authorization.html'; });
             document.getElementById('btnAddCard').addEventListener('click', addCard);
             try {
                 var u = JSON.parse(localStorage.getItem(STORAGE_USER) || '{}');
                 var el = document.getElementById('displayUsername');
                 if (el) el.textContent = u.fullName || u.email || 'User';
             } catch (_) {}
+
+            function renderCards(cards) {
+                return cards.map(function(c) {
+                    return '<div class="card-item" data-card-id="' + c.id + '">' +
+                        '<div class="info">' +
+                        '<div class="number-container">' +
+                        '<span class="number card-number" data-full-number="' + escapeHtml(c.fullNumber) + '">' +
+                        escapeHtml(c.maskedNumber) +
+                        '</span>' +
+                        '<button type="button" class="btn-eye" data-id="' + c.id + '" title="Показать/скрыть полный номер карты">' +
+                        '👁️' +
+                        '</button>' +
+                        '</div>' +
+                        '<div class="expiry">До ' + (c.expiryDate || '—') + ' · ' + (c.status || 'ACTIVE') + '</div>' +
+                        '</div>' +
+                        '<div class="balance">' + formatMoney(c.balance) + '</div>' +
+                        '<div class="actions">' +
+                        '<button type="button" class="btn btn-sm btn-primary btn-reissue" data-id="' + c.id + '">Перевыпуск</button>' +
+                        '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' + c.id + '">Удалить</button>' +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+            }
+
+            // Функция для кнопок удаления и перевыпуска карт
+            function attachCardButtons() {
+                var list = document.getElementById('cardList');
+
+                list.querySelectorAll('.btn-delete').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        deleteCard(parseInt(btn.getAttribute('data-id'), 10));
+                    });
+                });
+
+                list.querySelectorAll('.btn-reissue').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        reissueCard(parseInt(btn.getAttribute('data-id'), 10));
+                    });
+                });
+            }
+
+            //Функция показа полного номера карты при нажатии на глазок
+            function attachEyeButtons() {
+                var eyeButtons = document.querySelectorAll('.btn-eye');
+
+                eyeButtons.forEach(function(eyeBtn) {
+                    var cardItem = eyeBtn.closest('.card-item');
+                    var numberSpan = cardItem.querySelector('.card-number');
+                    var originalMaskedNumber = numberSpan.textContent;
+                    var fullNumber = numberSpan.getAttribute('data-full-number');
+
+                    eyeBtn.onclick = function() {
+                        if (numberSpan.textContent === originalMaskedNumber) {
+                            numberSpan.textContent = fullNumber;
+                            eyeBtn.classList.add('active');
+                        } else {
+                            numberSpan.textContent = originalMaskedNumber;
+                            eyeBtn.classList.remove('active');
+                        }
+                    };
+                });
+            }
+
+            document.getElementById('newCardNumber').addEventListener('input', function (event) {
+                var digits = (event.target.value || '').replace(/\D/g, '').slice(0, 16);
+                event.target.value = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+            });
+
             loadCards();
         })();
     </script>

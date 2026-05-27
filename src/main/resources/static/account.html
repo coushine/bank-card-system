@@ -177,8 +177,8 @@
                 <select id="topUpCardId"><option value="">— Выберите карту —</option></select>
                 <label>Сумма (₽)</label>
                 <input type="number" id="topUpAmount" min="0.01" step="0.01" placeholder="0.00">
-                <label>Карта, с которой списать (необязательно)</label>
-                <input type="text" id="topUpSourceCard" placeholder="Номер карты-источника">
+                <label>Карта, с которой списать (должна быть в БД)</label>
+                <input type="text" id="topUpSourceCard" placeholder="Введите номер карты-источника">
                 <button type="button" class="btn btn-primary" id="btnTopUp">Пополнить</button>
             </div>
             <div class="action-box">
@@ -205,8 +205,9 @@
     <script>
         (function () {
             const STORAGE_USER = 'bankUser';
+            const STORAGE_TOKEN = 'bankToken';
 
-            //Достает данные о пользователе из памяти браузера
+            //Достает данные о пользователя из памяти браузера
             function getStoredUser() {
                 try {
                     const raw = localStorage.getItem(STORAGE_USER);
@@ -225,7 +226,20 @@
             //Удаляет ключ bankUser из памяти и перенаправляет браузер на страницу авторизации
             function logout() {
                 localStorage.removeItem(STORAGE_USER);
+                localStorage.removeItem(STORAGE_TOKEN);
                 window.location.href = '/authorization.html';
+            }
+
+            function getAuthToken() {
+                return localStorage.getItem(STORAGE_TOKEN);
+            }
+
+            function authFetch(url, options) {
+                var token = getAuthToken();
+                if (!token) return Promise.resolve({ ok: false, status: 401, json: function () { return Promise.resolve({ message: 'Unauthorized' }); } });
+                var opts = options || {};
+                opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+                return fetch(url, opts);
             }
 
             //Вывод денег
@@ -277,7 +291,7 @@
 
                 //Узнаем свежие данные профиля.
                 if (userId) {
-                    fetch('/users/' + userId)
+                    authFetch('/users/' + userId)
                         .then(function (r) { return r.ok ? r.json() : null; })
                         .then(function (data) {
                             if (data && data.fullName) {
@@ -285,6 +299,7 @@
                                     var stored = getStoredUser() || {};
                                     stored.fullName = data.fullName;
                                     stored.email = data.email;
+                                    stored.phoneNumber = data.phoneNumber;
                                     stored.id = data.id;
                                     localStorage.setItem(STORAGE_USER, JSON.stringify(stored));
                                 } catch (_) {}
@@ -296,7 +311,7 @@
 
                 // получить баланс, список карт и последние операции
                 if (userId) {
-                    fetch('/users/' + userId + '/summary')
+                    authFetch('/users/' + userId + '/summary')
                         .then(function (r) { return r.ok ? r.json() : null; })
                         .then(function (data) {
                             if (data) {
@@ -343,11 +358,12 @@
                 // 1. Как только вы начали печатать, ID сбрасывается в null
                 transferToCardId = null;
 
-                // 2. Если введено меньше 4 символов — ничего не делаем
                 var el = document.getElementById('transferToLookup');
-                var num = (this.value || '').replace(/\s/g, '');
 
-                if (num.length < 4) { el.textContent = ''; return; }
+                // Оставляем только цифры (убираем пробелы, дефисы и любые разделители)
+                var num = (this.value || '').replace(/\D/g, '');
+
+                if (num.length < 16) { el.textContent = ''; return; }
 
                 var userId = getStoredUser() && getStoredUser().id;
                 if (!userId) {
@@ -355,45 +371,52 @@
                     return;
                 }
 
-                console.log("Отправляю запрос на поиск карты:", num);
-                fetch('/users/' + userId + '/cards/lookup?number=' + encodeURIComponent(num))
-                    .then(function (r) {
-                        console.log("Сервер ответил, статус:", r.status);
-                        return r.ok ? r.json() : null;
+                authFetch('/users/' + userId + '/cards/lookup?number=' + encodeURIComponent(num))
+                    .then(function (r) { //обработчик «успешного завершения» запроса.
+                        if (!r.ok ) //(правда, если статус от 200 до 299).
+                            return null;
+                        // Иногда сервер может вернуть пустое тело при 200.
+                        // Чтобы избежать `Unexpected end of JSON input`, парсим только непустой ответ.
+                        return r.text().then(function (text) {
+                            if (!text) return null;
+                            try { return JSON.parse(text); }
+                            catch (e) { return null; }
+                        });
                     })
                     .then(function (card) {
-                        console.log("Данные от сервера:", card);
                         if (card) {
                             transferToCardId = card.id;
                             el.textContent = 'Карта найдена: ' + card.maskedNumber;
                         }
                         else { el.textContent = 'Карта с таким номером не найдена в БД'; }
                     })
-                    .catch(function (err) {
-                        console.error("Ошибка при запросе fetch:", err);
-                    });
+                    .catch(function () {});
             });
 
+            //Функция пополнения карты
             document.getElementById('btnTopUp').addEventListener('click', function () {
                 var user = getStoredUser();
                 if (!user || !user.id) { showMessage('Войдите в аккаунт', true); return; }
                 var cardId = document.getElementById('topUpCardId').value;
                 var amount = document.getElementById('topUpAmount').value;
+                var sourceCardNumber = (document.getElementById('topUpSourceCard').value || '').replace(/\D/g, '');
                 if (!cardId) { showMessage('Выберите карту', true); return; }
                 if (!amount || parseFloat(amount) <= 0) { showMessage('Введите сумму', true); return; }
-                fetch('/users/' + user.id + '/cards/' + cardId + '/top-up', {
+                if (sourceCardNumber.length < 16) { showMessage('Введите корректный номер карты-источника из БД', true); return; }
+                authFetch('/users/' + user.id + '/cards/' + cardId + '/top-up', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: parseFloat(amount), sourceCardNumber: document.getElementById('topUpSourceCard').value || null })
+                    body: JSON.stringify({ amount: parseFloat(amount), sourceCardNumber: sourceCardNumber })
                 })
                     .then(function (r) {
                         if (r.ok) return;
                         return r.json().then(function (b) { throw new Error(b.message || 'Ошибка'); });
                     })
-                    .then(function () { showMessage('Карта пополнена'); document.getElementById('topUpAmount').value = ''; loadAccountData(); })
+                    .then(function () { showMessage('Карта пополнена'); document.getElementById('topUpAmount').value = ''; document.getElementById('topUpSourceCard').value = ''; loadAccountData(); })
                     .catch(function (e) { showMessage(e.message || 'Ошибка', true); });
             });
 
+            //Функция перевода другому пользователю
             document.getElementById('btnTransfer').addEventListener('click', function () {
                 var user = getStoredUser();
                 if (!user || !user.id) { showMessage('Войдите в аккаунт', true); return; }
@@ -405,17 +428,44 @@
                 if (!transferToCardId) { showMessage('Введите номер карты получателя (должна быть в БД)', true); return; }
                 if (!amount || parseFloat(amount) <= 0) { showMessage('Введите сумму', true); return; }
 
-                fetch('/users/' + user.id + '/transfers', {
+                authFetch('/users/' + user.id + '/transfers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fromCardId: parseInt(fromId, 10), toCardId: transferToCardId, amount: parseFloat(amount) })
+                    body: JSON.stringify({
+                        fromCardId: parseInt(fromId, 10),
+                        toCardId: transferToCardId,
+                        amount: parseFloat(amount) })
                 })
                     .then(function (r) {
-                        if (r.ok) return r.json();
-                        return r.json().then(function (b) { throw new Error(b.message || 'Ошибка'); });
+                        // Если статус не 2xx, пытаемся прочитать ошибку
+                        if (!r.ok) {
+                            return r.text().then(function (text) {
+                                var msg = 'Ошибка сервера';
+                                try {
+                                    var json = JSON.parse(text);
+                                    msg = json.message || msg;
+                                } catch(e) { msg = text || msg; }
+                                throw new Error(msg);
+                            });
+                        }
+
+                        // Если всё хорошо, проверяем, не пустой ли ответ
+                        return r.text().then(function (text) {
+                            return text ? JSON.parse(text) : {}; // Если пусто, возвращаем пустой объект
+                        });
                     })
-                    .then(function () { showMessage('Перевод выполнен'); document.getElementById('transferAmount').value = ''; document.getElementById('transferToCardNumber').value = ''; document.getElementById('transferToLookup').textContent = ''; transferToCardId = null; loadAccountData(); })
-                    .catch(function (e) { showMessage(e.message || 'Ошибка перевода', true); });
+                    .then(function () { showMessage('Перевод выполнен');
+                        // Очищаем поля
+                        document.getElementById('transferAmount').value = '';
+                        document.getElementById('transferToCardNumber').value = '';
+                        document.getElementById('transferToLookup').textContent = ''; transferToCardId = null; loadAccountData();
+                        // Обновляем данные на странице
+                        loadAccountData();
+                    })
+                    .catch(function (e) {
+                        console.error(e);
+                        showMessage(e.message || 'Ошибка перевода', true);
+                    });
             });
 
             document.getElementById('btnLogout').addEventListener('click', logout);

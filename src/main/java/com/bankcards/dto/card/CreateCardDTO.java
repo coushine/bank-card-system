@@ -8,9 +8,9 @@ import java.time.LocalDate;
 
 @Data
 public class CreateCardDTO {
-    @NotBlank(message = "Card number is required")
+    @NotBlank(message = "Необходимо написать номер карты")
     private String number;
 
-    @NotNull(message = "Expiry date is required")
+    @NotNull(message = "Необходимо выбрать срок действия карты")
     private LocalDate expiryDate;
 }

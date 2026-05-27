@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface TransferService {
     TransferDTO transfer(long userId, TransferRequestDTO dto);
-    void topUp(long userId, int cardId, BigDecimal amount);
+    void topUp(long userId, int cardId, BigDecimal amount, String sourceCardNumber);
     List<TransferDTO> getRecentTransfersByUserId(long userId, int limit);
 }

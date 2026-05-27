@@ -5,6 +5,7 @@ import com.bankcards.entity.enums.CardStatus;
 //import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.persistence.*;
 //import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 import lombok.experimental.Accessors;
 
@@ -17,10 +18,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @RequiredArgsConstructor
-//@Accessors(chain = true)
-//@Hidden
 public class CardEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -42,7 +40,7 @@ public class CardEntity {
     private CardStatus status;
 
     @Column(name = "balance", nullable = false)
-//    @PositiveOrZero
+    @PositiveOrZero
     private BigDecimal balance;
 
     @Enumerated(EnumType.STRING)

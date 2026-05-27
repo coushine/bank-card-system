@@ -2,6 +2,7 @@ package com.bankcards.service;
 
 import com.bankcards.dto.user.UserDTO;
 import com.bankcards.dto.user.UserLoginDTO;
+import com.bankcards.dto.user.UpdateUserProfileDTO;
 import com.bankcards.entity.UserEntity;
 
 public interface UserService {
@@ -11,4 +12,5 @@ public interface UserService {
     UserDTO getUserDTOByEmail(String email);
     UserDTO registerUser(UserEntity userEntity);
     boolean checkUser(UserLoginDTO user);
+    UserDTO updateUserProfile(long id, UpdateUserProfileDTO dto);
 }

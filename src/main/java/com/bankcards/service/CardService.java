@@ -11,6 +11,5 @@ public interface CardService {
     void deleteCard(long userId, int cardId);
     CardDTO reissueCard(long userId, int cardId);
     CardDTO getCard(long userId, int cardId);
-    /** Lookup any card by number (e.g. for transfer target). Returns null if not found. */
     CardDTO findCardByNumber(String number);
 }

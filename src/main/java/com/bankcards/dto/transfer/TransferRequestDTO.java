@@ -8,13 +8,13 @@ import java.math.BigDecimal;
 
 @Data
 public class TransferRequestDTO {
-    @NotNull(message = "From card ID is required")
+    @NotNull(message = "Введите номер карты-источника")
     private Long fromCardId;
 
-    @NotNull(message = "To card ID is required")
+    @NotNull(message = "Введите номер карты-получателя")
     private Long toCardId;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be positive")
+    @NotNull(message = "Введите сумму")
+    @DecimalMin(value = "0.01", message = "Сумма должна быть положительной")
     private BigDecimal amount;
 }
